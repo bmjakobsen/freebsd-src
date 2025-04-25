@@ -91,6 +91,10 @@ The number of queue pairs used is the lesser of the maximum supported by the
 driver and the hypervisor, the number of CPUs present in the guest, and this
 tunable if not zero.
 The default value is 0.
+.It Va hw.vtnet.altq_disable
+.It Va hw.vtnet. Ns Ar X Ns Va .altq_disable
+This tunable disables ALTQ support, allowing use of multiqueue.
+The default value is 0
 .El
 .Sh SEE ALSO
 .Xr arp 4 ,
