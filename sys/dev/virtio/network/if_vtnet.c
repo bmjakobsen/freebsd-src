@@ -1042,7 +1042,7 @@ vtnet_alloc_virtqueues(struct vtnet_softc *sc)
 		    "%s-rx%d", device_get_nameunit(dev), rxq->vtnrx_id);
 
 		txq = &sc->vtnet_txqs[i];
-		VQ_ALLOC_INFO_INIT(&info[idx+1], sc->vtnet_tx_nsegs,
+		VQ_ALLOC_INFO_INIT(&info[idx + 1], sc->vtnet_tx_nsegs,
 		    vtnet_tx_vq_intr, txq, &txq->vtntx_vq,
 		    "%s-tx%d", device_get_nameunit(dev), txq->vtntx_id);
 	}
@@ -1054,7 +1054,7 @@ vtnet_alloc_virtqueues(struct vtnet_softc *sc)
 		    "%s-rx%d", device_get_nameunit(dev), rxq->vtnrx_id);
 
 		txq = &sc->vtnet_txqs[i];
-		VQ_ALLOC_INFO_INIT(&info[idx+1], 0, NULL, txq, &txq->vtntx_vq,
+		VQ_ALLOC_INFO_INIT(&info[idx + 1], 0, NULL, txq, &txq->vtntx_vq,
 		    "%s-tx%d", device_get_nameunit(dev), txq->vtntx_id);
 	}
 
@@ -3876,8 +3876,12 @@ vtnet_update_vlan_filter(struct vtnet_softc *sc, int add, uint16_t tag)
 	int idx, bit;
 
 	ifp = sc->vtnet_ifp;
-	idx = (tag >> 5) & 0x7F;
-	bit = tag & 0x1F;
+
+	idx = tag >> 5;
+	idx &= 0x7F;
+
+	bit = tag;
+	bit &= 0x1F;
 
 	if (tag == 0 || tag > 4095)
 		return;
