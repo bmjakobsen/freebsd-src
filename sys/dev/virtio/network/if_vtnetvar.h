@@ -30,11 +30,10 @@
 #define _IF_VTNETVAR_H
 
 
-#define VTNET_ALTQ_DISABLED (1)
+#define VTNET_ALTQ_CAPABLE (0)
 #ifdef ALTQ
-#define VTNET_ALTQ_CAPABLE
-#undef VTNET_ALTQ_DISABLED
-#define VTNET_ALTQ_DISABLED (0)
+#undef VTNET_ALTQ_CAPABLE
+#define VTNET_ALTQ_CAPABLE (1)
 #endif
 
 struct vtnet_softc;

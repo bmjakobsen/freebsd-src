@@ -288,12 +288,15 @@ SYSCTL_INT(_hw_vtnet, OID_AUTO, mq_disable, CTLFLAG_RDTUN,
     &vtnet_mq_disable, 0, "Disables multiqueue support");
 
 
-static int vtnet_altq_disable = VTNET_ALTQ_DISABLED;
-#ifdef VTNET_ALTQ_CAPABLE
+static int vtnet_altq_disable = 0;
 SYSCTL_INT(_hw_vtnet, OID_AUTO, altq_disable, CTLFLAG_RDTUN,
-    &vtnet_altq_disable, 0, "Explicitly Disable ALTQ");
-#endif
+    &vtnet_altq_disable, 0, "Disable ALTQ Support");
 
+/* For driver to be considered having ALTQ enabled,
+ * it needs to be compiled to be altq capable,
+ * and the tunable hw.vtnet.altq_disable must be zero
+*/
+#define VTNET_ALTQ_ENABLED (VTNET_ALTQ_CAPABLE && (!vtnet_altq_disable))
 
 static int vtnet_mq_max_pairs = VTNET_MAX_QUEUE_PAIRS;
 SYSCTL_INT(_hw_vtnet, OID_AUTO, mq_max_pairs, CTLFLAG_RDTUN,
@@ -652,7 +655,7 @@ vtnet_negotiate_features(struct vtnet_softc *sc)
 		features &= ~VTNET_LRO_FEATURES;
 
 	// Unset MQ featuere flag if necessary
-	if (!vtnet_altq_disable || vtnet_tunable_int(sc, "mq_disable", vtnet_mq_disable))
+	if (VTNET_ALTQ_ENABLED || vtnet_tunable_int(sc, "mq_disable", vtnet_mq_disable))
 		features &= ~VIRTIO_NET_F_MQ;
 
 
@@ -872,7 +875,7 @@ vtnet_init_txq(struct vtnet_softc *sc, int id)
 	if (txq->vtntx_sg == NULL)
 		return (ENOMEM);
 
-	if (vtnet_altq_disable) {
+	if (!VTNET_ALTQ_ENABLED) {
 		txq->vtntx_br = buf_ring_alloc(VTNET_DEFAULT_BUFRING_SIZE, M_DEVBUF,
 		    M_NOWAIT, &txq->vtntx_mtx);
 		if (txq->vtntx_br == NULL)
@@ -950,7 +953,7 @@ vtnet_destroy_txq(struct vtnet_txq *txq)
 		txq->vtntx_sg = NULL;
 	}
 
-	if (vtnet_altq_disable) {
+	if (!VTNET_ALTQ_ENABLED) {
 		if (txq->vtntx_br != NULL) {
 			buf_ring_free(txq->vtntx_br, M_DEVBUF);
 			txq->vtntx_br = NULL;
@@ -1099,7 +1102,7 @@ vtnet_setup_interface(struct vtnet_softc *sc)
 	if_setioctlfn(ifp, vtnet_ioctl);
 	if_setgetcounterfn(ifp, vtnet_get_counter);
 
-	if (vtnet_altq_disable) {
+	if (!VTNET_ALTQ_ENABLED) {
 		if_settransmitfn(ifp, vtnet_txq_mq_start);
 		if_setqflushfn(ifp, vtnet_qflush);
 	} else {
@@ -2787,7 +2790,7 @@ vtnet_txq_start(struct vtnet_txq *txq)
 	sc = txq->vtntx_sc;
 	ifp = sc->vtnet_ifp;
 
-	if (vtnet_altq_disable) {
+	if (!VTNET_ALTQ_ENABLED) {
 		if (!drbr_empty(ifp, txq->vtntx_br))
 			vtnet_txq_mq_start_locked(txq, NULL);
 	} else {
@@ -3010,11 +3013,11 @@ vtnet_get_counter(if_t ifp, ift_counter cnt)
 	case IFCOUNTER_OPACKETS:
 		return (txaccum.vtxs_opackets);
 	case IFCOUNTER_OBYTES:
-		if (vtnet_altq_disable)
+		if (!VTNET_ALTQ_ENABLED)
 			return (txaccum.vtxs_obytes);
 		/* FALLTHROUGH */
 	case IFCOUNTER_OMCASTS:
-		if (vtnet_altq_disable)
+		if (!VTNET_ALTQ_ENABLED)
 			return (txaccum.vtxs_omcasts);
 		/* FALLTHROUGH */
 	default:
@@ -3120,7 +3123,7 @@ vtnet_drain_taskqueues(struct vtnet_softc *sc)
 		txq = &sc->vtnet_txqs[i];
 		if (txq->vtntx_tq != NULL) {
 			taskqueue_drain(txq->vtntx_tq, &txq->vtntx_intrtask);
-			if (vtnet_altq_disable)
+			if (!VTNET_ALTQ_ENABLED)
 				taskqueue_drain(txq->vtntx_tq, &txq->vtntx_defrtask);
 		}
 	}
