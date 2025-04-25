@@ -663,7 +663,7 @@ vtnet_negotiate_features(struct vtnet_softc *sc)
 
 		mtu = virtio_read_dev_config_2(dev,
 		    offsetof(struct virtio_net_config, mtu));
-		if (mtu < VTNET_MIN_MTU /* || mtu > VTNET_MAX_MTU */) {
+		if (mtu < VTNET_MIN_MTU) {
 			device_printf(dev, "Invalid MTU value: %d. "
 			    "MTU feature disabled.\n", mtu);
 			features &= ~VIRTIO_NET_F_MTU;
@@ -1048,7 +1048,7 @@ vtnet_alloc_virtqueues(struct vtnet_softc *sc)
 	}
 
 	/* These queues will not be used so allocate the minimum resources. */
-	for (/**/; i < sc->vtnet_max_vq_pairs; i++, idx += 2) {
+	for (; i < sc->vtnet_max_vq_pairs; i++, idx += 2) {
 		rxq = &sc->vtnet_rxqs[i];
 		VQ_ALLOC_INFO_INIT(&info[idx], 0, NULL, rxq, &rxq->vtnrx_vq,
 		    "%s-rx%d", device_get_nameunit(dev), rxq->vtnrx_id);
@@ -1831,14 +1831,7 @@ static int
 vtnet_rxq_csum_data_valid(struct vtnet_rxq *rxq, struct mbuf *m,
     uint16_t etype, int hoff, struct virtio_net_hdr *hdr __unused)
 {
-#if 0
-	struct vtnet_softc *sc;
-#endif
 	int protocol;
-
-#if 0
-	sc = rxq->vtnrx_sc;
-#endif
 
 	switch (etype) {
 #if defined(INET)
@@ -1875,13 +1868,6 @@ vtnet_rxq_csum_data_valid(struct vtnet_rxq *rxq, struct mbuf *m,
 		 * protocol. Let the stack re-verify the checksum later
 		 * if the protocol is supported.
 		 */
-#if 0
-		if_printf(sc->vtnet_ifp,
-		    "%s: checksum offload of unsupported protocol "
-		    "etype=%#x protocol=%d csum_start=%d csum_offset=%d\n",
-		    __func__, etype, protocol, hdr->csum_start,
-		    hdr->csum_offset);
-#endif
 		break;
 	}
 
